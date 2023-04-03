@@ -116,7 +116,9 @@ where
         let editor_rect = ui.max_rect();
         ui.allocate_rect(editor_rect, Sense::hover());
 
-        let cursor_pos = ui.ctx().input().pointer.hover_pos().unwrap_or(Pos2::ZERO);
+        let cursor_pos = ui
+            .ctx()
+            .input(|input_state| input_state.pointer.hover_pos().unwrap_or(Pos2::ZERO));
         let mut cursor_in_editor = editor_rect.contains(cursor_pos);
         let mut cursor_in_finder = false;
 
@@ -394,43 +396,45 @@ where
 
         /* Mouse input handling */
 
-        // This locks the context, so don't hold on to it for too long.
-        let mouse = &ui.ctx().input().pointer;
+        ui.ctx().input(|input_state| {
+            // This locks the context, so don't hold on to it for too long.
+            let mouse = &input_state.pointer;
 
-        if mouse.any_released() && self.connection_in_progress.is_some() {
-            self.connection_in_progress = None;
-        }
+            if mouse.any_released() && self.connection_in_progress.is_some() {
+                self.connection_in_progress = None;
+            }
 
-        if mouse.secondary_released() && cursor_in_editor && !cursor_in_finder {
-            self.node_finder = Some(NodeFinder::new_at(cursor_pos));
-        }
-        if ui.ctx().input().key_pressed(Key::Escape) {
-            self.node_finder = None;
-        }
+            if mouse.secondary_released() && cursor_in_editor && !cursor_in_finder {
+                self.node_finder = Some(NodeFinder::new_at(cursor_pos));
+            }
+            if input_state.key_pressed(Key::Escape) {
+                self.node_finder = None;
+            }
 
-        if r.dragged() && ui.ctx().input().pointer.middle_down() {
-            self.pan_zoom.pan += ui.ctx().input().pointer.delta();
-        }
+            if r.dragged() && input_state.pointer.middle_down() {
+                self.pan_zoom.pan += input_state.pointer.delta();
+            }
 
-        // Deselect and deactivate finder if the editor backround is clicked,
-        // *or* if the the mouse clicks off the ui
-        if click_on_background || (mouse.any_click() && !cursor_in_editor) {
-            self.selected_nodes = Vec::new();
-            self.node_finder = None;
-        }
+            // Deselect and deactivate finder if the editor backround is clicked,
+            // *or* if the the mouse clicks off the ui
+            if click_on_background || (mouse.any_click() && !cursor_in_editor) {
+                self.selected_nodes = Vec::new();
+                self.node_finder = None;
+            }
 
-        if drag_started_on_background && mouse.primary_down() {
-            self.ongoing_box_selection = Some(cursor_pos);
-        }
-        if mouse.primary_released() || drag_released_on_background {
-            self.ongoing_box_selection = None;
-        }
+            if drag_started_on_background && mouse.primary_down() {
+                self.ongoing_box_selection = Some(cursor_pos);
+            }
+            if mouse.primary_released() || drag_released_on_background {
+                self.ongoing_box_selection = None;
+            }
 
-        GraphResponse {
-            node_responses: delayed_responses,
-            cursor_in_editor,
-            cursor_in_finder,
-        }
+            GraphResponse {
+                node_responses: delayed_responses,
+                cursor_in_editor,
+                cursor_in_finder,
+            }
+        })
     }
 }
 
@@ -628,7 +632,7 @@ where
                 port_type.data_type_color(user_state)
             };
             ui.painter()
-                .circle(port_rect.center(), 5.0, port_color, Stroke::none());
+                .circle(port_rect.center(), 5.0, port_color, Stroke::NONE);
 
             if resp.drag_started() {
                 if is_connected_input {
@@ -650,7 +654,7 @@ where
                     // Don't allow self-loops
                     if graph.any_param_type(origin_param).unwrap() == port_type
                         && close_enough
-                        && ui.input().pointer.any_released()
+                        && ui.input(|input_state| input_state.pointer.any_released())
                     {
                         match (param_id, origin_param) {
                             (AnyParameterId::Input(input), AnyParameterId::Output(output))
@@ -734,7 +738,7 @@ where
                     .user_data
                     .titlebar_color(ui, self.node_id, self.graph, user_state)
                     .unwrap_or_else(|| background_color.lighten(0.8)),
-                stroke: Stroke::none(),
+                stroke: Stroke::NONE,
             });
 
             let body_rect = Rect::from_min_size(
@@ -745,7 +749,7 @@ where
                 rect: body_rect,
                 rounding: Rounding::none(),
                 fill: background_color,
-                stroke: Stroke::none(),
+                stroke: Stroke::NONE,
             });
 
             let bottom_body_rect = Rect::from_min_size(
@@ -756,7 +760,7 @@ where
                 rect: bottom_body_rect,
                 rounding,
                 fill: background_color,
-                stroke: Stroke::none(),
+                stroke: Stroke::NONE,
             });
 
             let node_rect = titlebar_rect.union(body_rect).union(bottom_body_rect);
@@ -765,7 +769,7 @@ where
                     rect: node_rect.expand(1.0),
                     rounding,
                     fill: Color32::WHITE.lighten(0.8),
-                    stroke: Stroke::none(),
+                    stroke: Stroke::NONE,
                 })
             } else {
                 Shape::Noop

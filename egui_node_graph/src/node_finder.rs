@@ -63,9 +63,10 @@ where
                     self.just_spawned = false;
                 }
 
-                let mut query_submit = resp.lost_focus() && ui.input().key_down(Key::Enter);
+                let mut query_submit =
+                    resp.lost_focus() && ui.input(|input_state| input_state.key_down(Key::Enter));
 
-                let max_height = ui.input().screen_rect.height() * 0.5;
+                let max_height = ui.input(|input_state| input_state.screen_rect.height() * 0.5);
                 let scroll_area_width = resp.rect.width() - 30.0;
 
                 Frame::default()
